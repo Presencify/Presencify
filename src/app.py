@@ -101,7 +101,7 @@ class App:
                 filter(lambda rpc: rpc.client_id != data["client_id"], self.__rpcs)
             )
             Logger.write(msg=f"{rpc} successfully closed", origin=self)
-    
+        await websocket.send(json.dumps(data))
 
     async def run(self) -> None:
         async with self:
