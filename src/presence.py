@@ -10,7 +10,7 @@ class Presence:
         self.__rpc = pp.AioPresence(client_id)
 
     def __repr__(self) -> str:
-        return f"Presence({self.__name}, {self.__client_id})"
+        return f"Presence(name={self.__name})"
 
     async def __aenter__(self) -> "Presence":
         await self.__rpc.connect()
