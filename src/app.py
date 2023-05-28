@@ -5,6 +5,7 @@ from .presence import Presence
 from .constants import Constants
 from .logger import Logger
 
+
 class App:
 
     __slots__ = ("__host", "__port", "__ws", "__rpcs")
@@ -12,7 +13,7 @@ class App:
     def __init__(self, host: str = "localhost", port: int = 6996):
         self.__host, self.__port = host, port
         self.__ws, self.__rpcs = None, ()
-    
+
     def __exception_handler(self, exc: Exception) -> None:
         Logger.write(msg=str(exc), level="error", origin=self)
 
@@ -30,7 +31,6 @@ class App:
         self.__ws.close()
         await self.__ws.wait_closed()
         Logger.write(msg="Closed.", origin=self)
-
 
     def __new_rpc(self, client_id: str, name: str) -> Presence:
         presence = Presence(client_id, name)
