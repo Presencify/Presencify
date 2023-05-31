@@ -11,7 +11,9 @@ class Logger:
         _print = kwargs.get("print", True)
         now = datetime.now()
         formatted_now = now.strftime("%d/%m/%Y %H:%M:%S")
-        origin = origin.__class__.__name__ if origin != "__main__" else origin
+        if origin == "__main__":
+            origin = "main"
+        origin = origin.__class__.__name__ if origin != "main" else origin
         output = f"{level.upper()} | {origin}: {msg}\r"
         if _print:
             print(output)
