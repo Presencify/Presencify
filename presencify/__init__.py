@@ -5,7 +5,7 @@ This application is not affiliated with Discord in any way.
 
 from .runtime import Runtime
 from .logger import Logger
-from .presence import Presence
+from .presence import Presence, PresenceEx
 
 __title__ = "Presencify"
 __version__ = "0.0.1"
