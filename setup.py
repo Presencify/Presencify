@@ -16,6 +16,7 @@ setup(
             "main.py",
             target_name="presencify.exe",
             base="Console",
+            icon="assets/presencify_logo.ico",
             shortcut_name="Presencify",
             copyright="© 2020 - 2023 by " + __author__ + " - All rights reserved",
         )
