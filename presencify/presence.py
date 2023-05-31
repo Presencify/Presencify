@@ -184,6 +184,10 @@ class PresenceEx:
         self.__rpc_thread.start()
 
     def update(self, **kwargs) -> None:
+        # TODO:valite kwargs
+        presencify.Logger.write(
+            msg=f"Updating {self.name}: {kwargs}", origin=self, _print=False
+        )
         self.data = kwargs
 
     def __loop(self) -> None:
