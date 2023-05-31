@@ -1,54 +1,59 @@
-import json
 import os
-import sys
 import time
 import presencify
 
 
-if __name__ == "__main__":
-    folders = os.listdir("presences")
-    folders = [folder for folder in folders if not folder.endswith(".py")]
-    presences = []
-    for folder in folders:
-        files = os.listdir(f"presences/{folder}")
-        if not "metadata.json" in files:
-            presencify.Logger.write(
-                msg=f"metadata.json not found in {folder}", level="warning"
-            )
-            continue
-        if not "main.py" in files:
-            presencify.Logger.write(f"main.py not found in {folder}", level="warning")
-            continue
-        with open(f"presences/{folder}/metadata.json", "r") as metadata_file:
-            metadata = json.load(metadata_file)
-        with open(f"presences/{folder}/main.py", "r") as main_file:
-            main_code = main_file.read()
-        presence = presencify.Presence(
-            name=metadata["name"],
-            description=metadata["description"],
-            author=metadata["author"],
-            client_id=metadata["client_id"],
-            uses_browser=metadata["uses_browser"],
-            main_code=main_code,
-            folder=folder,
-        )
-        presencify.Logger.write(msg=f"Loaded presence {presence}", origin=__name__)
-        presences.append(presence)
-    if len(presences) == 0:
-        presencify.Logger.write(msg="No presences found, exiting", origin=__name__)
-        sys.exit(0)
-    presencify.Logger.write(msg=f"Loaded {len(presences)} presences", origin=__name__)
-    presencify.Logger.write(msg="Starting presences...", origin=__name__)
-    for presence in presences:
-        presence.start()
-        time.sleep(1)
-    presencify.Logger.write(msg="Presences started", origin=__name__)
-    presencify.Logger.write(msg="Press Ctrl+C to stop presences", origin=__name__)
-    try:
-        while True:
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        for presence in presences:
-            presence.stop()
+def exist_folder(folder_name: str) -> bool:
+    return os.path.exists(folder_name)
 
-    input("Press enter to exit")
+
+def exists_file(file_name: str) -> bool:
+    return os.path.exists(file_name)
+
+
+def listdirEx(name: str, ext: str = None, exclude: bool = False) -> list:
+    if not exists_file(name):
+        return []
+    if ext is None:
+        return os.listdir(name)
+    files = os.listdir(name)
+    if exclude:
+        return [file for file in files if not file.endswith(ext)]
+    return [file for file in files if file.endswith(ext)]
+
+
+def main() -> None:
+    presences = []
+    if not exist_folder("presences"):
+        os.mkdir("presences")
+    subfolders = listdirEx("presences", ext=".py", exclude=True)
+    for folder in subfolders:
+        presences.append(presencify.PresenceTwo(location=f"presences/{folder}"))
+    presences = [presence for presence in presences if presence.loaded]
+    total = len(presences)
+    if total == 0:
+        raise ValueError("No presences found")
+    for presence in presences:
+        for presence_ in presences:
+            if presence == presence_:
+                raise ValueError(
+                    f"Repeated presence {presence.name} please, check your presences"
+                )
+    presencify.Logger.write(msg=f"Loaded {total} presence(s)", origin=__name__)
+    return presences
+
+
+if __name__ == "__main__":
+    presences = main()
+    try:
+        for presence in presences:
+            presence.start()
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        presencify.Logger.write(msg="Exiting...", origin=__name__)
+    except Exception as exc:
+        presencify.Logger.write(msg=f"Error: {exc}", level="error", origin=__name__)
+    for presence in presences:
+        presence.stop()
+    input("Press enter to exit...")
