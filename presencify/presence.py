@@ -8,73 +8,13 @@ import presencify
 
 
 class Presence:
-    """
-    Deprecated, use PresenceEx instead
-    """
-
-    data = {}
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-        self.running = False
-        self.uses_browser = kwargs.get("uses_browser", False)
-        self.rpc = pypresence.Presence(self.client_id)
-        self.code_t = None
-        self.rpc_t = None
-        self.running_event = threading.Event()
-
-    def start(self):
-        try:
-            self.rpc.connect()
-        except Exception as e:
-            presencify.Logger.write(msg=e, level="error", origin=self)
-            return
-        if not presencify.Runtime.enable() and self.uses_browser:
-            presencify.Logger.write(
-                msg="Runtime not enabled, can't start presence",
-                level="error",
-                origin=self,
-            )
-            return
-        self.running = True
-        globals_dict = {"running": self.running, "update": self.update}
-        globals_dict["running_event"] = self.running_event
-        self.code_t = threading.Thread(
-            target=exec, args=(self.main_code, globals_dict), daemon=True
-        )
-        self.rpc_t = threading.Thread(target=self.loop, daemon=True)
-        self.code_t.start()
-        self.rpc_t.start()
-
-    def loop(self):
-        presencify.Logger.write(msg=f"Started loop RPC for {self}", origin=self)
-        while self.running:
-            self.rpc.update(**self.data)
-            time.sleep(15)
-        self.rpc.close()
-        presencify.Logger.write(msg=f"Stopped loop RPC for {self}", origin=self)
-
-    def stop(self):
-        presencify.Logger.write(msg=f"Stopping presence {self}", origin=self)
-        self.running = False
-        self.running_event.set()
-        presencify.Logger.write(msg=f"Stopped presence {self}", origin=self)
-
-    def update(self, data):
-        self.data = data
-
-    def __repr__(self):
-        return f"Presence({self.name})"
-
-
-class PresenceEx:
     data = {}
 
     def __init__(self, location: str = None):
         if location is None:
             raise ValueError("Location can't be None")
         self.id = str(uuid.uuid4())
-        self.__rpc = None
+        self.__rpc = self.__runtime = None
         self.__location = location
         self.__script_thread = self.__rpc_thread = None
         self.connected = self.loaded = self.running = False
@@ -112,6 +52,13 @@ class PresenceEx:
             self.__main_code = self.__load_file("main.py")
             config = json.loads(self.__load_file("config.json"))
             self.__load_config(config)
+            if self.__uses_browser:
+                presencify.Logger.write(
+                    msg=f"Connecting {self.__location} to browser",
+                    origin=self,
+                )
+                self.__runtime = presencify.Runtime()
+                self.__runtime.connect()
         except FileNotFoundError as exc:
             raise ValueError(f"Missing file {exc.filename}")
         except json.JSONDecodeError as exc:
@@ -124,6 +71,7 @@ class PresenceEx:
 
     def __execute_script(self) -> None:
         globals_dict = {
+            "runtime": self.__runtime,
             "running": self.running,
             "update_rpc": self.update,
         }
@@ -135,7 +83,7 @@ class PresenceEx:
         self.stop()
 
     def __eq__(self, other) -> bool:
-        if not isinstance(other, PresenceTwo):
+        if not isinstance(other, Presence):
             return False
         if self.id == other.id:
             return False
@@ -159,16 +107,14 @@ class PresenceEx:
             )
             self.__rpc.close()
             self.connected = False
+        if self.__uses_browser:
+            presencify.Logger.write(
+                msg=f"Disconnecting browser for {self.name}", origin=self
+            )
+            self.__runtime.close()
         presencify.Logger.write(msg=f"Stopped loop RPC for {self.name}", origin=self)
 
     def start(self) -> None:
-        if not presencify.Runtime.enable() and self.__uses_browser:
-            presencify.Logger.write(
-                msg=f"Runtime not enabled, can't start presence {self.name}",
-                level="error",
-                origin=self,
-            )
-            return
         self.__rpc.connect()
         self.connected = True
         self.running = True
@@ -185,15 +131,14 @@ class PresenceEx:
 
     def update(self, **kwargs) -> None:
         # TODO:valite kwargs
-        presencify.Logger.write(
-            msg=f"Updating {self.name}: {kwargs}", origin=self, _print=False
-        )
         self.data = kwargs
 
     def __loop(self) -> None:
-        self.__rpc.update(**self.data)
         while self.running:
             time.sleep(15)
             if not self.connected:
                 continue
+            presencify.Logger.write(
+                msg=f"Updating {self.name}: {self.data}", origin=self
+            )
             self.__rpc.update(**self.data)
