@@ -98,21 +98,18 @@ class Presence:
         return self.__client_id
 
     def stop(self) -> None:
-        if not self.running and not self.connected:
-            return
         self.running = False
-        if self.connected:
-            presencify.Logger.write(
-                msg=f"Disconnecting RPC for {self.name}", origin=self
-            )
+        presencify.Logger.write(msg=f"Stopped {self.name}", origin=self)
+
+    def disconnect(self) -> None:
+        if not self.connected:
             self.__rpc.close()
-            self.connected = False
         if self.__uses_browser:
             presencify.Logger.write(
                 msg=f"Disconnecting browser for {self.name}", origin=self
             )
             self.__runtime.close()
-        presencify.Logger.write(msg=f"Stopped loop RPC for {self.name}", origin=self)
+        presencify.Logger.write(msg=f"Disconnected {self.name}", origin=self)
 
     def start(self) -> None:
         self.__rpc.connect()
@@ -135,10 +132,10 @@ class Presence:
 
     def __loop(self) -> None:
         while self.running:
-            time.sleep(15)
-            if not self.connected:
-                continue
             presencify.Logger.write(
                 msg=f"Updating {self.name}: {self.data}", origin=self
             )
-            self.__rpc.update(**self.data)
+            if self.connected:
+                self.__rpc.update(**self.data)
+            time.sleep(15)
+        self.connected = False

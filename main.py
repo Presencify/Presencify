@@ -1,5 +1,6 @@
 import os
 import time
+import threading
 import presencify
 
 
@@ -43,7 +44,21 @@ def main() -> None:
                     f"Repeated presence {presence.name} please, check your presences"
                 )
     presencify.Logger.write(msg=f"Loaded {total} presence(s)", origin=__name__)
-    return presences
+
+    for presence in presences:
+        presence.start()
+        time.sleep(2)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        presencify.Logger.write(msg="Exiting...", origin=__name__)
+    for presence in presences:
+        presence.stop()
+    time.sleep(1)
+    for presence in presences:
+        presence.disconnect()
+    return
 
 
 if __name__ == "__main__":
@@ -51,23 +66,5 @@ if __name__ == "__main__":
     presencify.Logger.info("This application is not affiliated with Discord in any way")
     presencify.Logger.info("Source code: www.github.com/Presencify")
     presencify.Logger.info("To stop the application, press CTRL+C")
-    presences = main()
-    try:
-        for presence in presences:
-            presence.start()
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        presencify.Logger.write(msg="Exiting...", origin=__name__)
-    except Exception as exc:
-        presencify.Logger.write(msg=f"Error: {exc}", level="error", origin=__name__)
-    for presence in presences:
-        try:
-            presence.stop()
-        except Exception as exc:
-            presencify.Logger.write(
-                msg=f"Ignoring error when stopping {presence.name}: {exc}",
-                origin=__name__,
-                print=False,
-            )
-    presencify.Logger.info("Press enter to exit...")
+    main()
+    input("Press ENTER to exit...")
