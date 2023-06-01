@@ -24,6 +24,8 @@ def listdirEx(name: str, ext: str = None, exclude: bool = False) -> list:
 
 def main() -> None:
     presences = []
+    # set console title
+    os.system(f"title Presencify v{presencify.__version__}")
     if not exist_folder("presences"):
         os.mkdir("presences")
     subfolders = listdirEx("presences", ext=".py", exclude=True)
