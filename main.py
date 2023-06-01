@@ -34,7 +34,8 @@ def main() -> None:
     presences = [presence for presence in presences if presence.loaded]
     total = len(presences)
     if total == 0:
-        raise ValueError("No presences found")
+        presencify.Logger.write(msg="No presences found", origin=__name__)
+        return []
     for presence in presences:
         for presence_ in presences:
             if presence == presence_:
@@ -46,6 +47,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    presencify.Logger.info("Presencify - A Discord Rich Presence Manager")
+    presencify.Logger.info("This application is not affiliated with Discord in any way")
+    presencify.Logger.info("Source code: www.github.com/Presencify")
+    presencify.Logger.info("To stop the application, press CTRL+C")
     presences = main()
     try:
         for presence in presences:
@@ -65,4 +70,4 @@ if __name__ == "__main__":
                 origin=__name__,
                 print=False,
             )
-    input("Press enter to exit...")
+    presencify.Logger.info("Press enter to exit...")

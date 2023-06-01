@@ -4,6 +4,10 @@ from .constants import Constants
 
 class Logger:
     @staticmethod
+    def info(msg: str) -> None:
+        Logger.write(msg=msg, level="info", origin="__main__")
+
+    @staticmethod
     def write(**kwargs) -> None:
         msg = kwargs.get("msg", "")
         level = kwargs.get("level", "info")
@@ -12,8 +16,8 @@ class Logger:
         now = datetime.now()
         formatted_now = now.strftime("%d/%m/%Y %H:%M:%S")
         if origin == "__main__":
-            origin = "main"
-        origin = origin.__class__.__name__ if origin != "main" else origin
+            origin = "App"
+        origin = origin.__class__.__name__ if origin != "App" else origin
         output = f"{level.upper()} | {origin}: {msg}\r"
         if _print:
             print(output)

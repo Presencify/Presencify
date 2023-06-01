@@ -14,7 +14,7 @@ setup(
     executables=[
         Executable(
             "main.py",
-            target_name="presencify.exe",
+            target_name="Presencify.exe",
             base="Console",
             icon="assets/presencify_logo.ico",
             shortcut_name="Presencify",
