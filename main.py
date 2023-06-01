@@ -28,7 +28,7 @@ def main() -> None:
         os.mkdir("presences")
     subfolders = listdirEx("presences", ext=".py", exclude=True)
     for folder in subfolders:
-        presences.append(presencify.PresenceTwo(location=f"presences/{folder}"))
+        presences.append(presencify.Presence(location=f"presences/{folder}"))
     presences = [presence for presence in presences if presence.loaded]
     total = len(presences)
     if total == 0:
@@ -55,5 +55,12 @@ if __name__ == "__main__":
     except Exception as exc:
         presencify.Logger.write(msg=f"Error: {exc}", level="error", origin=__name__)
     for presence in presences:
-        presence.stop()
+        try:
+            presence.stop()
+        except Exception as exc:
+            presencify.Logger.write(
+                msg=f"Ignoring error when stopping {presence.name}: {exc}",
+                origin=__name__,
+                print=False,
+            )
     input("Press enter to exit...")
