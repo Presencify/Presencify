@@ -4,6 +4,8 @@ Note, this is a beta feature and may not work as expected.
 import json
 import requests
 import inspect
+import webbrowser as wb
+import os as _os
 from websocket import create_connection
 from .constants import Constants
 from .logger import Logger
@@ -107,11 +109,25 @@ class Runtime:
             image=data[2],
             title=data[3],
         )
+    
+    def __open_remote_browser(self, port: int = 9222) -> None:
+        try:
+            # Open 'chrome.exe' with the remote debugging port
+            sequence = f"start chrome.exe --remote-debugging-port={port} --remote-allow-origins=*"
+            _os.system(sequence)
+            Logger.write(
+                msg="Opened remote browser debugging correctly", 
+                origin=self,
+                level="info"
+            )
+        except Exception as exc:
+            raise RuntimeError("Failed to open remote browser debugging") from exc
 
     def connect(self) -> None:
         try:
             if self.__connected:
                 return
+            self.__open_remote_browser()
             data = self.__request()
             data = self.__filter(data)
             if len(data) == 0:
