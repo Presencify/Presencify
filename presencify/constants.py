@@ -1,5 +1,5 @@
 class Constants:
-    REMOTE_URL = "http://localhost:9222/json"
+    REMOTE_URL = "http://localhost:{port}/json"
     LOG_OUTPUT_FILENAME = "client.log"
     OS_COMPAT = "Windows"
     # DEPRECATED for now

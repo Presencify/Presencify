@@ -2,13 +2,13 @@
 Note, this is a beta feature and may not work as expected.
 """
 import json
-import requests
 import inspect
-import webbrowser as wb
-import os as _os
+import requests
+import subprocess as sp
 from websocket import create_connection
 from .constants import Constants
 from .logger import Logger
+from .utils import Utils
 
 
 class MediaSession:
@@ -26,6 +26,7 @@ class Runtime:
         "__enable",
         "__current_tab",
         "__ws",
+        "__port",
         "__connected",
     )
 
@@ -37,6 +38,7 @@ class Runtime:
                 level="error",
             )
             return
+        self.__port = Utils.get_free_port()
         self.__connected = False
         self.__current_tab = self.__ws = None
 
@@ -44,15 +46,27 @@ class Runtime:
         if not self.__connected:
             return
         self.__pages = self.__request()
+        if self.__pages == []:
+            Logger.write(
+                msg="Remote browser closed unexpectedly!",
+                origin=self,
+                level="error",
+            )
+            self.__connected = False
+            return
         self.__pages = self.__filter(self.__pages)
         self.__current_tab = self.__pages[0]
         self.__ws_close()
         self.__ws = create_connection(self.__current_tab["webSocketDebuggerUrl"])
 
     def __request(self) -> dict:
-        with requests.get(Constants.REMOTE_URL) as response:
-            return json.loads(response.text)
-        return {}
+        try:
+            with requests.get(
+                Constants.REMOTE_URL.format(port=self.__port)
+            ) as response:
+                return json.loads(response.text)
+        except Exception as exc:
+            return []
 
     def __filter(self, data: dict) -> dict:
         return [element for element in data if element["type"] == "page"]
@@ -109,33 +123,71 @@ class Runtime:
             image=data[2],
             title=data[3],
         )
-    
-    def __open_remote_browser(self, port: int = 9222) -> None:
-        try:
-            # Open 'chrome.exe' with the remote debugging port
-            sequence = f"start chrome.exe --remote-debugging-port={port} --remote-allow-origins=*"
-            _os.system(sequence)
-            Logger.write(
-                msg="Opened remote browser debugging correctly", 
-                origin=self,
-                level="info"
+
+    def execute(self, code: str) -> None:
+        if not self.__connected:
+            return
+        self.__update()
+        self.__ws.send(
+            json.dumps(
+                {
+                    "id": 0,
+                    "method": "Runtime.evaluate",
+                    "params": {"expression": code},
+                }
             )
-        except Exception as exc:
-            raise RuntimeError("Failed to open remote browser debugging") from exc
+        )
+        data = json.loads(self.__ws.recv())
+        return data["result"]["result"]["value"]
+
+    def __open_remote_browser(self, port: int) -> None:
+        """
+        Open a remote browser instance.
+        For more security we use a random port.
+        """
+        browser = Utils.get_default_browser()
+        if Utils.find_windows_process(browser["process"]["win32"]):
+            Logger.write(
+                msg=f"Another instance of {browser['name']} is already running",
+                origin=self,
+                print=False,
+            )
+            Logger.write(
+                msg=f"This instance is not from Presencify, please close it and try again",
+                origin=self,
+                print=False,
+            )
+            raise RuntimeError("Can't connect to remote browser")
+
+        Logger.write(
+            msg=f"Opening remote {browser['name']} instance...",
+            origin=self,
+        )
+        sp.Popen(
+            [
+                browser["path"],
+                "--remote-debugging-port={port}".format(port=port),
+                "--remote-allow-origins=*",
+                "--disable-sync",
+            ],
+            stdout=sp.DEVNULL,
+            stderr=sp.DEVNULL,
+        )
 
     def connect(self) -> None:
-        try:
-            if self.__connected:
-                return
-            self.__open_remote_browser()
-            data = self.__request()
-            data = self.__filter(data)
-            if len(data) == 0:
-                raise RuntimeError("No pages found")
-            self.__current_tab = data[0]
-            self.__connected = True
-        except Exception as exc:
-            raise RuntimeError("Failed to connect to browser runtime") from exc
+        if self.__connected:
+            return
+        self.__open_remote_browser(self.__port)
+        data = self.__request()
+        data = self.__filter(data)
+        if len(data) == 0:
+            raise RuntimeError("No pages found")
+        self.__current_tab = data[0]
+        self.__connected = True
+        Logger.write(
+            msg=f"Browser remote instance connected successfully",
+            origin=self,
+        )
 
     def is_enabled(self) -> bool:
         return self.__connected
