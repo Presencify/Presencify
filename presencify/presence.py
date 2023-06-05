@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import time
 import uuid
@@ -8,7 +9,10 @@ import presencify
 
 
 class Presence:
-    data = {}
+    data = {
+        "start": time.time(),
+        "end": time.time(),
+    }
 
     def __init__(self, location: str = None):
         if location is None:
@@ -69,7 +73,17 @@ class Presence:
         )
         self.loaded = True
 
+    def __check_imports(
+        self, name, globals=None, locals=None, fromlist=(), level=0
+    ) -> None:
+        if name not in presencify.Constants.ALLOWED_MODULES:
+            raise ImportError(f"Module {name} is not allowed")
+        return presencify.Constants.ALLOWED_MODULES[name]
+
     def __execute_script(self) -> None:
+        for module_name in presencify.Constants.ALLOWED_MODULES.keys():
+            sys.modules[module_name] = presencify.Constants.ALLOWED_MODULES[module_name]
+        sys.modules["builtins"].__import__ = self.__check_imports
         globals_dict = {
             "runtime": self.__runtime,
             "running": self.running,
@@ -80,6 +94,9 @@ class Presence:
 
     def __on_script_end(self) -> None:
         presencify.Logger.write(msg=f"Script for {self.name} has ended", origin=self)
+        for module_name in presencify.Constants.ALLOWED_MODULES.keys():
+            del sys.modules[module_name]
+        del sys.modules["builtins"].__import__
         self.stop()
 
     def __eq__(self, other) -> bool:
@@ -96,6 +113,18 @@ class Presence:
     @property
     def client_id(self) -> str:
         return self.__client_id
+
+    @property
+    def folder_name(self) -> str:
+        return self.__location.split("/")[-1]
+
+    @property
+    def main_code(self) -> str:
+        return self.__main_code
+
+    @property
+    def config_file(self) -> str:
+        return self.__load_file("config.json")
 
     def stop(self) -> None:
         self.running = False
@@ -127,15 +156,20 @@ class Presence:
         self.__rpc_thread.start()
 
     def update(self, **kwargs) -> None:
-        # TODO:valite kwargs
+        # TODO: valite kwargs
         self.data = kwargs
+        self.data["large_text"] = f"{presencify.__title__} v{presencify.__version__}"
+        presencify.Logger.write(
+            msg=f"Local update for {self.name}: {kwargs}", origin=self, print=False
+        )
 
     def __loop(self) -> None:
         while self.running:
-            presencify.Logger.write(
-                msg=f"Updating {self.name}: {self.data}", origin=self
-            )
             if self.connected:
+                presencify.Logger.write(msg=f"Updating {self.name}", origin=self)
+                presencify.Logger.write(
+                    msg=f"Sending {self.data}", origin=self, print=False
+                )
                 self.__rpc.update(**self.data)
             time.sleep(15)
         self.connected = False
