@@ -4,32 +4,48 @@ import threading
 import presencify
 
 
-def exist_folder(folder_name: str) -> bool:
-    return os.path.exists(folder_name)
-
-
-def exists_file(file_name: str) -> bool:
-    return os.path.exists(file_name)
-
-
-def listdirEx(name: str, ext: str = None, exclude: bool = False) -> list:
-    if not exists_file(name):
-        return []
-    if ext is None:
-        return os.listdir(name)
-    files = os.listdir(name)
-    if exclude:
-        return [file for file in files if not file.endswith(ext)]
-    return [file for file in files if file.endswith(ext)]
+def sync_presences(local_presences: list, github_presences: list) -> None:
+    """
+    Sync presences from github repo to local presences
+    """
+    for local_presence in local_presences:
+        if local_presence.folder_name not in list(github_presences.keys()):
+            presencify.Logger.write(
+                msg=f"If you want to create a new presence, please, check the documentation",
+                origin=__name__,
+                level="warning",
+            )
+            raise ValueError(
+                f"{local_presence.name} not allowed, please use registered presences"
+            )
+        else:
+            local_config = presencify.Utils.hash_string(local_presence.config_file)
+            github_config = presencify.Utils.hash_string(
+                github_presences[local_presence.folder_name]["config"]
+            )
+            local_main_code = presencify.Utils.hash_string(local_presence.main_code)
+            github_main_code = presencify.Utils.hash_string(
+                github_presences[local_presence.folder_name]["main"]
+            )
+            if local_main_code != github_main_code:
+                raise ValueError(
+                    f"{local_presence.folder_name} main.py is modified, please, don't modify it"
+                )
+            if local_config != github_config:
+                raise ValueError(
+                    f"{local_presence.folder_name} config.json is modified, please, don't modify it"
+                )
+    presencify.Logger.write(
+        msg="Pass all checks, starting to sync presences", origin=__name__
+    )
 
 
 def main() -> None:
     presences = []
-    # set console title
     os.system(f"title Presencify v{presencify.__version__}")
-    if not exist_folder("presences"):
+    if not presencify.Utils.exist_folder("presences"):
         os.mkdir("presences")
-    subfolders = listdirEx("presences", ext=".py", exclude=True)
+    subfolders = presencify.Utils.listdirEx("presences", ext=".py", exclude=True)
     for folder in subfolders:
         presences.append(presencify.Presence(location=f"presences/{folder}"))
     presences = [presence for presence in presences if presence.loaded]
@@ -43,6 +59,8 @@ def main() -> None:
                 raise ValueError(
                     f"Repeated presence {presence.name} please, check your presences"
                 )
+    github_presences = presencify.Utils.fetch_github_presences()
+    sync_presences(presences, github_presences)
     presencify.Logger.write(msg=f"Loaded {total} presence(s)", origin=__name__)
 
     for presence in presences:
@@ -66,5 +84,8 @@ if __name__ == "__main__":
     presencify.Logger.info("This application is not affiliated with Discord in any way")
     presencify.Logger.info("Source code: www.github.com/Presencify")
     presencify.Logger.info("To stop the application, press CTRL+C")
-    main()
+    try:
+        main()
+    except Exception as exc:
+        presencify.Logger.write(msg=exc, origin=__name__, level="error")
     input("Press ENTER to exit...")
