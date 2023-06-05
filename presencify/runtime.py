@@ -2,8 +2,7 @@
 Note, this is a beta feature and may not work as expected.
 """
 import json
-import inspect
-import requests
+import httpx
 import subprocess as sp
 from websocket import create_connection
 from .constants import Constants
@@ -14,6 +13,15 @@ from .utils import Utils
 class MediaSession:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+    def __eq__(self, other):
+        if not isinstance(other, MediaSession):
+            return False
+        return (
+            self.artist == other.artist
+            and self.artwork == other.artwork
+            and self.title == other.title
+        )
 
 
 class Runtime:
@@ -31,13 +39,6 @@ class Runtime:
     )
 
     def __init__(self):
-        if inspect.stack()[1].filename == "<string>":
-            Logger.write(
-                msg="Please don't use the Runtime class from presencify, use 'runtime' directly",
-                origin=self,
-                level="error",
-            )
-            return
         self.__port = Utils.get_free_port()
         self.__connected = False
         self.__current_tab = self.__ws = None
@@ -61,10 +62,8 @@ class Runtime:
 
     def __request(self) -> dict:
         try:
-            with requests.get(
-                Constants.REMOTE_URL.format(port=self.__port)
-            ) as response:
-                return json.loads(response.text)
+            response = httpx.get(Constants.REMOTE_URL.format(port=self.__port))
+            return response.json()
         except Exception as exc:
             return []
 
@@ -105,7 +104,8 @@ class Runtime:
                     "method": "Runtime.evaluate",
                     "params": {
                         "expression": "\
-                        [navigator.mediaSession.metadata.album,\
+                        [navigator.mediaSession.playbackState,\
+                        navigator.mediaSession.metadata.album,\
                         navigator.mediaSession.metadata.artist,\
                         navigator.mediaSession.metadata.artwork[0].src,\
                         navigator.mediaSession.metadata.title].join('@')",
@@ -118,10 +118,11 @@ class Runtime:
             return None
         data = data["result"]["result"]["value"].split("@")
         return MediaSession(
-            album=data[0],
-            artist=data[1],
-            image=data[2],
-            title=data[3],
+            playbackState=data[0],
+            album=data[1],
+            artist=data[2],
+            image=data[3],
+            title=data[4],
         )
 
     def execute(self, code: str) -> None:
