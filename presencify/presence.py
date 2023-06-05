@@ -56,13 +56,6 @@ class Presence:
             self.__main_code = self.__load_file("main.py")
             config = json.loads(self.__load_file("config.json"))
             self.__load_config(config)
-            if self.__uses_browser:
-                presencify.Logger.write(
-                    msg=f"Connecting {self.__location} to browser",
-                    origin=self,
-                )
-                self.__runtime = presencify.Runtime()
-                self.__runtime.connect()
         except FileNotFoundError as exc:
             raise ValueError(f"Missing file {exc.filename}")
         except json.JSONDecodeError as exc:
@@ -140,7 +133,18 @@ class Presence:
             self.__runtime.close()
         presencify.Logger.write(msg=f"Disconnected {self.name}", origin=self)
 
-    def start(self) -> None:
+    def __connect_browser(self, port: int) -> None:
+        if self.__uses_browser:
+            presencify.Logger.write(
+                msg=f"Connecting {self.__location} to browser",
+                origin=self,
+            )
+            self.__runtime = presencify.Runtime(port=port)
+            self.__runtime.connect()
+
+    def start(self, port: int = None) -> None:
+        if port is not None:
+            self.__connect_browser(port)
         self.__rpc.connect()
         self.connected = True
         self.running = True

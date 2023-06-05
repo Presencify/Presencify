@@ -62,9 +62,10 @@ def main() -> None:
     github_presences = presencify.Utils.fetch_github_presences()
     sync_presences(presences, github_presences)
     presencify.Logger.write(msg=f"Loaded {total} presence(s)", origin=__name__)
-
+    free_port = presencify.Utils.get_free_port()
+    presencify.Utils.open_remote_browser(free_port)
     for presence in presences:
-        presence.start()
+        presence.start(port=free_port)
         time.sleep(2)
     try:
         while True:

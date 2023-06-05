@@ -7,6 +7,7 @@ import winreg as wr
 import subprocess as sp
 from .browsers import BROWSERS
 from .constants import Constants
+from .logger import Logger
 
 
 class Utils:
@@ -110,3 +111,38 @@ class Utils:
             return response.text
         else:
             raise ValueError("Error while getting presence content from github repo")
+
+    @staticmethod
+    def open_remote_browser(port: int) -> None:
+        """
+        Open a remote browser instance.
+        For more security we use a random port.
+        """
+        browser = Utils.get_default_browser()
+        if Utils.find_windows_process(browser["process"]["win32"]):
+            Logger.write(
+                msg=f"Another instance of {browser['name']} is already running",
+                origin=__name__,
+                print=False,
+            )
+            Logger.write(
+                msg=f"This instance is not from Presencify, please close it and try again",
+                origin=__name__,
+                print=False,
+            )
+            raise RuntimeError("Can't connect to remote browser")
+
+        Logger.write(
+            msg=f"Opening remote {browser['name']} instance...",
+            origin=__name__,
+        )
+        sp.Popen(
+            [
+                browser["path"],
+                "--remote-debugging-port={port}".format(port=port),
+                "--remote-allow-origins=*",
+                "--disable-sync",
+            ],
+            stdout=sp.DEVNULL,
+            stderr=sp.DEVNULL,
+        )

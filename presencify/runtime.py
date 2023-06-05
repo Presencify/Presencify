@@ -38,8 +38,8 @@ class Runtime:
         "__connected",
     )
 
-    def __init__(self):
-        self.__port = Utils.get_free_port()
+    def __init__(self, port: int):
+        self.__port = port
         self.__connected = False
         self.__current_tab = self.__ws = None
 
@@ -82,6 +82,7 @@ class Runtime:
 
     @property
     def url(self) -> str:
+        self.__update()
         return self.__current_tab["url"]
 
     @property
@@ -141,44 +142,9 @@ class Runtime:
         data = json.loads(self.__ws.recv())
         return data["result"]["result"]["value"]
 
-    def __open_remote_browser(self, port: int) -> None:
-        """
-        Open a remote browser instance.
-        For more security we use a random port.
-        """
-        browser = Utils.get_default_browser()
-        if Utils.find_windows_process(browser["process"]["win32"]):
-            Logger.write(
-                msg=f"Another instance of {browser['name']} is already running",
-                origin=self,
-                print=False,
-            )
-            Logger.write(
-                msg=f"This instance is not from Presencify, please close it and try again",
-                origin=self,
-                print=False,
-            )
-            raise RuntimeError("Can't connect to remote browser")
-
-        Logger.write(
-            msg=f"Opening remote {browser['name']} instance...",
-            origin=self,
-        )
-        sp.Popen(
-            [
-                browser["path"],
-                "--remote-debugging-port={port}".format(port=port),
-                "--remote-allow-origins=*",
-                "--disable-sync",
-            ],
-            stdout=sp.DEVNULL,
-            stderr=sp.DEVNULL,
-        )
-
     def connect(self) -> None:
         if self.__connected:
             return
-        self.__open_remote_browser(self.__port)
         data = self.__request()
         data = self.__filter(data)
         if len(data) == 0:
