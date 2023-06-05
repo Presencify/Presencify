@@ -9,6 +9,7 @@ setup(
     options={
         "build_exe": {
             "excludes": ["tkinter", "unittest"],
+            "includes": ["psutil"],
         }
     },
     executables=[
