@@ -1,11 +1,40 @@
+import os
 import re
+import httpx
+import hashlib
 import socket as s
 import winreg as wr
 import subprocess as sp
 from .browsers import BROWSERS
+from .constants import Constants
 
 
 class Utils:
+    @staticmethod
+    def listdirEx(name: str, ext: str = None, exclude: bool = False) -> list:
+        if not Utils.exists_file(name):
+            return []
+        if ext is None:
+            return os.listdir(name)
+        files = os.listdir(name)
+        if exclude:
+            return [file for file in files if not file.endswith(ext)]
+        return [file for file in files if file.endswith(ext)]
+
+    @staticmethod
+    def exist_folder(folder_name: str) -> bool:
+        return os.path.exists(folder_name)
+
+    @staticmethod
+    def exists_file(file_name: str) -> bool:
+        return os.path.exists(file_name)
+
+    @staticmethod
+    def hash_string(string: str) -> str:
+        hasher = hashlib.blake2b()
+        hasher.update(string.encode("utf-8"))
+        return hasher.hexdigest()
+
     @staticmethod
     def get_free_port():
         sock = s.socket(s.AF_INET, s.SOCK_STREAM)
@@ -51,3 +80,33 @@ class Utils:
             .strip()
         )
         return len(res) > 0
+
+    @staticmethod
+    def fetch_github_presences() -> dict:
+        response = httpx.get(Constants.PRESENCES_ENDPOINT)
+        if response.status_code == 200:
+            contents = response.json()
+            presences = {}
+            for content in contents:
+                main_raw = Utils.fetch_github_presence_content(
+                    content["name"], "main.py"
+                )
+                config_raw = Utils.fetch_github_presence_content(
+                    content["name"], "config.json"
+                )
+                presences[content["name"]] = {"main": main_raw, "config": config_raw}
+            return presences
+        else:
+            raise ValueError("Error while getting presences from github repo")
+
+    @staticmethod
+    def fetch_github_presence_content(presence_name: str, file_name: str) -> str:
+        response = httpx.get(
+            Constants.PRESENCES_ENDPOINT_CONTENT.format(
+                name=presence_name, file=file_name
+            )
+        )
+        if response.status_code == 200:
+            return response.text
+        else:
+            raise ValueError("Error while getting presence content from github repo")
