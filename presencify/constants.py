@@ -14,7 +14,7 @@ class Constants:
         "json": __import__("json"),
         "urllib": __import__("urllib"),
         "httpx": __import__("httpx"),
-        "requests": __import__("requests"),
+        "psutil": __import__("psutil"),
     }
 
     # DEPRECATED for now
