@@ -119,13 +119,23 @@ class Presence:
     def config_file(self) -> str:
         return self.__load_file("config.json")
 
+    @property
+    def uses_browser(self) -> bool:
+        return self.__uses_browser
+
+    @property
+    def author(self) -> str:
+        return self.__author
+
     def stop(self) -> None:
         self.running = False
         presencify.Logger.write(msg=f"Stopped {self.name}", origin=self)
 
     def disconnect(self) -> None:
-        if not self.connected:
+        if self.connected:
+            self.__rpc.clear()
             self.__rpc.close()
+            self.connected = False
         if self.__uses_browser:
             presencify.Logger.write(
                 msg=f"Disconnecting browser for {self.name}", origin=self
@@ -176,4 +186,3 @@ class Presence:
                 )
                 self.__rpc.update(**self.data)
             time.sleep(15)
-        self.connected = False
