@@ -98,7 +98,7 @@ class Utils:
                 presences[content["name"]] = {"main": main_raw, "config": config_raw}
             return presences
         else:
-            raise ValueError("Error while getting presences from github repo")
+            raise ValueError(f"Error while getting presences: {response.message}")
 
     @staticmethod
     def fetch_github_presence_content(presence_name: str, file_name: str) -> str:
@@ -110,7 +110,7 @@ class Utils:
         if response.status_code == 200:
             return response.text
         else:
-            raise ValueError("Error while getting presence content from github repo")
+            raise ValueError(f"Error while getting presences: {response.message}")
 
     @staticmethod
     def open_remote_browser(port: int) -> None:
