@@ -88,7 +88,6 @@ def on_presence_click(
     else:
         presence.stop()
         label.configure(text="Stopping...")
-        time.sleep(1)
         presence.disconnect()
         label.configure(text="Disconnected")
     button_style = "Connected.TButton" if presence.connected else "Disconnected.TButton"
