@@ -20,6 +20,7 @@ class Presence:
         self.id = str(uuid.uuid4())
         self.__rpc = self.__runtime = None
         self.__location = location
+        self.__original_import = __import__
         self.__script_thread = self.__rpc_thread = None
         self.connected = self.loaded = self.running = False
         try:
@@ -85,11 +86,11 @@ class Presence:
         exec(self.__main_code, globals_dict)
         self.__on_script_end()
 
+    def __reset_modules(self) -> None:
+        sys.modules["builtins"].__import__ = self.__original_import
+
     def __on_script_end(self) -> None:
         presencify.Logger.write(msg=f"Script for {self.name} has ended", origin=self)
-        for module_name in presencify.Constants.ALLOWED_MODULES.keys():
-            del sys.modules[module_name]
-        del sys.modules["builtins"].__import__
         self.stop()
 
     def __eq__(self, other) -> bool:
@@ -128,6 +129,14 @@ class Presence:
         return self.__author
 
     def stop(self) -> None:
+        try:
+            self.__reset_modules()
+        except Exception as exc:
+            presencify.Logger.write(
+                msg=f"When resetting modules for {self.name}: {exc}",
+                level="error",
+                origin=self,
+            )
         self.running = False
         presencify.Logger.write(msg=f"Stopped {self.name}", origin=self)
 
