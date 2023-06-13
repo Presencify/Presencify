@@ -43,6 +43,10 @@ class Runtime:
         self.__connected = False
         self.__current_tab = self.__ws = None
 
+    @property
+    def connected(self) -> bool:
+        return self.__connected
+
     def __update(self):
         if not self.__connected:
             return
@@ -76,9 +80,15 @@ class Runtime:
 
     def close(self) -> None:
         if not self.__connected:
+            Logger.write(
+                msg="Cannot close a connection that is not open!",
+                origin=self,
+                level="error",
+            )
             return
         self.__ws_close()
         self.__connected = False
+        Logger.write(msg="Closed connection with browser", origin=self)
 
     @property
     def url(self) -> str:
@@ -140,6 +150,8 @@ class Runtime:
             )
         )
         data = json.loads(self.__ws.recv())
+        if data["result"]["result"]["type"] == "undefined":
+            return None
         return data["result"]["result"]["value"]
 
     def connect(self) -> None:
