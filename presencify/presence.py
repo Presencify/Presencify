@@ -142,15 +142,31 @@ class Presence:
 
     def disconnect(self) -> None:
         if self.connected:
-            self.__rpc.clear()
-            self.__rpc.close()
+            presencify.Logger.write(msg=f"Disconnecting {self.name}...", origin=self)
+            try:
+                self.__rpc.close()
+            except Exception as exc:
+                presencify.Logger.write(
+                    msg=f"When disconnecting {self.name}: {exc}",
+                    level="error",
+                    origin=self,
+                )
             self.connected = False
         if self.__uses_browser:
             presencify.Logger.write(
-                msg=f"Disconnecting browser for {self.name}", origin=self
+                msg=f"Disconnecting browser for {self.name}...", origin=self
             )
-            self.__runtime.close()
-        presencify.Logger.write(msg=f"Disconnected {self.name}", origin=self)
+            if self.__runtime is None:
+                presencify.Logger.write(
+                    msg=f"Browser for {self.name} is not connected, skipping...",
+                    origin=self,
+                )
+            else:
+                self.__runtime.close()
+        self.running = False
+        presencify.Logger.write(
+            msg=f"Disconnected {self.name} successfully", origin=self
+        )
 
     def __connect_browser(self, port: int) -> None:
         if self.__uses_browser:
