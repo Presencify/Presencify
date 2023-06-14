@@ -9,7 +9,7 @@ from .constants import Constants
 from .utils import Utils
 
 __title__ = "Presencify"
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 __author__ = "Manuel Cabral"
 __license__ = "GNU GPLv3"
 __all__ = ["Runtime", "Logger", "Presence", "Constants", "Utils"]
