@@ -212,6 +212,6 @@ class Presence:
                 try:
                     self.__rpc.update(**self.data)
                 except Exception as exc:
-                    continue
+                    self.running = False
             time.sleep(15)
         presencify.Logger.write(msg=f"Loop for {self.name} has ended", origin=self)
