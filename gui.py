@@ -82,10 +82,17 @@ def on_canvas_configure(event: tk.Event) -> None:
 def on_presence_click(
     presence: presencify.Presence, button: ttk.Button, label: ttk.Label, port: int
 ) -> None:
+    # TODO: add a signal when a presence stops completely
     if not presence.connected and not presence.running:
         presence.start(port=port)
+        presencify.Logger.write(
+            msg=f"Presence {presence.name} started by user", origin=__name__
+        )
         label.configure(text="Connected")
     else:
+        presencify.Logger.write(
+            msg=f"Presence {presence.name} stopped by user", origin=__name__
+        )
         presence.stop()
         label.configure(text="Stopping...")
         presence.disconnect()
@@ -134,8 +141,15 @@ def on_gui_close(root: tk.Tk, presences: typing.List[presencify.Presence]) -> No
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         presencify.Logger.write(msg="Window closed by user", origin=__name__)
         for presence in presences:
-            presence.stop()
-            presence.disconnect()
+            try:
+                presence.stop()
+                presence.disconnect()
+            except Exception as exc:
+                presencify.Logger.write(
+                    msg=f"Error stopping presence {presence.name}: {exc}",
+                    origin=__name__,
+                    level="error",
+                )
         root.destroy()
 
 
