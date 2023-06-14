@@ -22,6 +22,7 @@ class Presence:
         self.__location = location
         self.__original_import = __import__
         self.__script_thread = self.__rpc_thread = None
+        self.__globals_dict = {}
         self.connected = self.loaded = self.running = False
         try:
             self.__load()
@@ -78,12 +79,7 @@ class Presence:
         for module_name in presencify.Constants.ALLOWED_MODULES.keys():
             sys.modules[module_name] = presencify.Constants.ALLOWED_MODULES[module_name]
         sys.modules["builtins"].__import__ = self.__check_imports
-        globals_dict = {
-            "runtime": self.__runtime,
-            "running": self.running,
-            "update_rpc": self.update,
-        }
-        exec(self.__main_code, globals_dict)
+        exec(self.__main_code, self.__globals_dict)
         self.__on_script_end()
 
     def __reset_modules(self) -> None:
@@ -142,9 +138,12 @@ class Presence:
 
     def disconnect(self) -> None:
         if self.connected:
-            presencify.Logger.write(msg=f"Disconnecting {self.name}...", origin=self)
+            presencify.Logger.write(
+                msg=f"Disconnecting {self.name} from Discord...", origin=self
+            )
             try:
-                self.__rpc.close()
+                if self.__rpc is not None:
+                    self.__rpc.close()
             except Exception as exc:
                 presencify.Logger.write(
                     msg=f"When disconnecting {self.name}: {exc}",
@@ -152,6 +151,9 @@ class Presence:
                     origin=self,
                 )
             self.connected = False
+            presencify.Logger.write(
+                msg=f"Disconnected {self.name} from Discord", origin=self
+            )
         if self.__uses_browser:
             presencify.Logger.write(
                 msg=f"Disconnecting browser for {self.name}...", origin=self
@@ -164,9 +166,8 @@ class Presence:
             else:
                 self.__runtime.close()
         self.running = False
-        presencify.Logger.write(
-            msg=f"Disconnected {self.name} successfully", origin=self
-        )
+        self.__globals_dict["running"] = self.running
+        presencify.Logger.write(msg=f"Succesfully stopped {self.name}", origin=self)
 
     def __connect_browser(self, port: int) -> None:
         if self.__uses_browser:
@@ -174,7 +175,7 @@ class Presence:
                 msg=f"Connecting {self.__location} to browser",
                 origin=self,
             )
-            self.__runtime = presencify.Runtime(port=port)
+            self.__runtime = presencify.Runtime(port=port, origin=self.__name)
             self.__runtime.connect()
 
     def start(self, port: int = None) -> None:
@@ -183,10 +184,9 @@ class Presence:
         self.__rpc.connect()
         self.connected = True
         self.running = True
-        globals_dict = {
-            "running": self.running,
-            "update_rpc": self.update,
-        }
+        self.__globals_dict = {"running": self.running, "update_rpc": self.update}
+        if self.__uses_browser:
+            self.__globals_dict["runtime"] = self.__runtime
         self.__script_thread = threading.Thread(
             target=self.__execute_script, daemon=True
         )
@@ -209,5 +209,9 @@ class Presence:
                 presencify.Logger.write(
                     msg=f"Sending {self.data}", origin=self, print=False
                 )
-                self.__rpc.update(**self.data)
+                try:
+                    self.__rpc.update(**self.data)
+                except Exception as exc:
+                    continue
             time.sleep(15)
+        presencify.Logger.write(msg=f"Loop for {self.name} has ended", origin=self)
