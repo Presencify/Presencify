@@ -5,8 +5,8 @@ Presencify
 Shows what you're doing on the <b>web</b> or <b>desktop</b> in Discord.
 </p>
 <p align="center">
-<img src="https://github.com/Presencify/Presencify/assets/83357673/1ad57e70-0adc-489f-be26-649298bfa82a" title="program">
-</P>
+<img src="https://github.com/Presencify/Presencify/assets/83357673/d1458ff8-4834-485f-aa5e-46fdee43e058" title="program">
+</p>
 
 # Installation
 Instructions and download [here](https://github.com/Presencify/Presencify/releases).
