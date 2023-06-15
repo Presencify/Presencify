@@ -101,6 +101,10 @@ class Presence:
         return self.__name
 
     @property
+    def version(self) -> str:
+        return self.__version
+
+    @property
     def client_id(self) -> str:
         return self.__client_id
 
