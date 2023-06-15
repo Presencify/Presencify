@@ -245,7 +245,7 @@ if __name__ == "__main__":
             item_frame, text=presence.name, style="Disconnected.TButton"
         )
         button.pack(side="left", padx=10, pady=5)
-        info_label = ttk.Label(item_frame, text=f"by {presence.author}")
+        info_label = ttk.Label(item_frame, text=f"v{presence.version}")
         info_label.pack(side="left", padx=10, pady=5)
         status_label = ttk.Label(item_frame, text="Disconnected")
         status_label.pack(side="left", padx=10, pady=5)
